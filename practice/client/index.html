@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>UPLOAD</h1>
+    <input type="file" id="file-input" />
+    <br />
+    <br />
+    <button type="submit" id="file-button">upload</button>
+  </body>
+  <script>
+    const inp = document.getElementById("file-input");
+    const btn = document.getElementById("file-button");
+
+    const fetching =  async (name,size,type) =>{
+        const url = "/metadata";
+
+        const response = await fetch(url,{
+            method : "POST",
+            headers : {
+                "Content-Type" : "application/json"
+            },
+            body : JSON.stringify({
+                fileName : name,
+                fileSize : size, 
+                fileType : type 
+            })
+        })
+        const data = await response.json();
+        console.log(data)
+        return data;
+    }
+
+
+    const uploading = async(file) =>{
+
+      var requestOptions = {
+        method: 'POST',
+        headers: {
+          "Content-Type" : "application/octet-stream"
+        },
+        body
+      };
+
+      const response = await fetch("/upload", requestOptions)
+      const data = await response.json();
+      return data;
+    }
+
+
+
+    btn.addEventListener("click" ,async ()=>{
+        const file = inp.files;
+        if(file.length > 0){
+            const currentFile = file['0'];
+            const errorhandling = await fetching(currentFile.name,currentFile.size,currentFile.type);
+            if(errorhandling.message === 'Data recived successfully'){
+                inp.value = '';
+                const uploadHandling = await uploading(currentFile);
+                console.log(uploadHandling);
+            }else if(errorhandling.error === 'No data recivied'){
+                window.alert("Failed");
+            }
+        }   
+    })
+
+  </script>
+</html>
+
+
+  
