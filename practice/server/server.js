@@ -51,7 +51,7 @@ app.post("/upload",async (req,res) =>{
 })
 
 
-app.listen(3040 , "127.0.0.1" ,() =>{
+app.listen(3040 , "127.0.0.1 " ,() =>{
     console.log("http://127.0.0.1:3040")
 })
 
