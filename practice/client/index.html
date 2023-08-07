@@ -6,17 +6,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
   </head>
+  <style>
+    #movie{
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: pointer;
+    }
+    #menu-bar{
+      width: 80px;
+      display: none;
+      flex-direction: column;
+      position: fixed;
+      border: 1px solid #000;
+    }
+  </style>
   <body>
     <h1>UPLOAD</h1>
     <input type="file" id="file-input" />
     <br />
     <br />
     <button type="submit" id="file-button">upload</button>
+    <br>
+    <br>
+    <div id="upload-progress"></div>
+    <!-- video streaming -->
+    <!-- <video controls autoplay id="video" width="480" height="240"></video> -->
+    <!-- video metaData  -->
+    <div>
+      <h2>MOVIES</h2>
+      <div id="movie">
+      </div>
+    </div>
+    <!-- menu bar -->
+    <div id="menu-bar">
+      <button id="play">PLAY</button>
+      <button id="remove">DELETE</button>
+    </div>
+    <!-- practice -->
+    <!-- <div id="practice" onclick="practice(event.target.textContent)">kjnkj</div> -->
   </body>
+  <!-- javascript -->
   <script>
+    let mvName = "";
     const inp = document.getElementById("file-input");
     const btn = document.getElementById("file-button");
+    const uploadProgress = document.getElementById("upload-progress");
+    const movie = document.getElementById("movie");
+    const menuBar = document.getElementById("menu-bar");
+    const play = document.getElementById("play");
+    const remove = document.getElementById("remove");
+    const practice = document.getElementById("practice"); //practice 
+    // const videoElement = document.getElementById("video");  
 
+    
     const fetching =  async (name,size,type) =>{
         const url = "/metadata";
 
@@ -37,23 +80,59 @@
     }
 
 
+    // const uploading = async(file) =>{
+
+    //   const requestOptions = {
+    //     method: 'POST',
+    //     headers: {
+    //       "Content-Type" : "application/octet-stream"
+    //     },
+    //     body
+    //   };
+
+    //   const response = await fetch("/upload", requestOptions)
+    //   const data = await response.json();
+    //   return data;
+    // }
+
     const uploading = async(file) =>{
+      const xhr = new XMLHttpRequest();
 
-      var requestOptions = {
-        method: 'POST',
-        headers: {
-          "Content-Type" : "application/octet-stream"
-        },
-        body
-      };
-
-      const response = await fetch("/upload", requestOptions)
-      const data = await response.json();
-      return data;
+      xhr.upload.onloadstart = () =>{
+        console.log("Upload started")
+      }
+      xhr.upload.onprogress = () =>{
+        const percetange = (event.loaded / event.total ) * 100 ;
+        const roundedPercentage = Math.round(percetange)
+        uploadProgress.textContent = `upload progress : ${roundedPercentage}%`;
+        if(event.loaded === event.total){
+          movie.innerHTML = "";
+          displayingMvMd();
+        }
+      }
+      xhr.onloadend = ()=>{
+        if (xhr.status == 200 ) {
+          console.log(xhr.response);
+        } else {
+          console.log("error " + this.status);
+        }
+      }
+      xhr.open("POST","/upload");
+      // xhr.responseType = 'json';
+      xhr.setRequestHeader("Content-Type","application/octet-stream")
+      xhr.send(file)
+    }
+    if(inp.files.length === 0){
+      uploadProgress.textContent = ""
     }
 
+    const fetchingMvMd = async () =>{
+      const url = "/movieMetadata";
 
-
+        const response = await fetch(url)
+        const data = await response.json();
+        return data;
+    }
     btn.addEventListener("click" ,async ()=>{
         const file = inp.files;
         if(file.length > 0){
@@ -62,13 +141,64 @@
             if(errorhandling.message === 'Data recived successfully'){
                 inp.value = '';
                 const uploadHandling = await uploading(currentFile);
-                console.log(uploadHandling);
+                
+                // console.log(uploadHandling);
             }else if(errorhandling.error === 'No data recivied'){
                 window.alert("Failed");
             }
-        }   
+        }
     })
+    
 
+    const displayingMvMd = async() =>{
+        const response = await fetch("/internalip");
+        const internalIP = await response.json();
+        const url = `ws://${internalIP.ip}:3090`;
+        const socket = new WebSocket(url);
+        socket.onmessage = e =>{
+          const mvData = JSON.parse(e.data);
+          movie.innerHTML = "";
+            mvData.map( item =>{
+              const ele = document.createElement("span");
+              ele.innerHTML = `<span>(${item.movie_id})</span> <span onclick="menuPopUp(event)">${item.movie_name}</span> `;
+              movie.append(ele)
+          })
+        }
+    }
+    displayingMvMd();
+    
+
+    const menuPopUp = (event) =>{
+      const { clientX , clientY  } = event;
+      menuBar.style.display = "flex";
+      menuBar.style.left = `${clientX}px`
+      menuBar.style.top = `${clientY}px`
+      mvName = event.target.textContent;
+    }
+      
+    const streaming = async() =>{
+      menuBar.style.display = "none";
+      const url = `/streaming?movieName=${mvName}`;
+      window.open(url);
+    }
+    const deleting = async () =>{
+      const url = "/deleting";
+      const response = await fetch(url,{
+        method : "DELETE",
+        headers : {
+          "Content-Type" : "application/json"
+        },
+        body: JSON.stringify({movieName : mvName})
+      })
+      const data = await response.json();
+      menuBar.style.display = "none";
+      movie.innerHTML = "";
+      displayingMvMd();
+      window.alert(data.success);
+    }
+    play.onclick = () => streaming();
+    remove.onclick = () => deleting();
+    // practice section
   </script>
 </html>
 
